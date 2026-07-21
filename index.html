@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An 8× RTX PRO 6000 Blackwell node, measured for local LLM coding</title>
+<style>
+/* ============================================================
+   Bench Report — shared system for both pages
+   Engineering-documentation style: one column, one accent,
+   sans prose / mono data. Light only by client requirement
+   (no dark variant — do not add prefers-color-scheme: dark).
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* surface */
+  --paper: #f7f8f9;        /* neutral gray-white, not cream */
+  --panel: #eef0f2;
+  --line: #d8dce1;
+
+  /* ink */
+  --ink: #1a1e24;
+  --muted: #5b6570;
+
+  /* accent = importance only (section markers, links, .hl, focus) */
+  --accent: #1d5fb4;
+  --accent-ink: #14477e;
+  --accent-wash: rgba(42, 120, 214, 0.10);
+  --accent-ring: rgba(42, 120, 214, 0.28);
+
+  /* fixed series/data colors (charts, chips) */
+  --s1: #2a78d6;
+  --s1-ink: #1c579c;       /* legible text pairing for s1 */
+  --s2: #1baf7a;
+  --s2-ink: #0e7d57;       /* legible text pairing for s2 */
+
+  /* type */
+  --sans: system-ui, "Segoe UI", "Noto Sans", Cantarell,
+          "Liberation Sans", "DejaVu Sans", "Helvetica Neue",
+          Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "JetBrains Mono",
+          "Noto Sans Mono", "Liberation Mono", "DejaVu Sans Mono",
+          Menlo, Consolas, monospace;
+
+  /* THE COLUMN — the only width in the system (704px) */
+  --col: 44rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ---- The Law of the Column ------------------------------------
+   body is the single content column. Nothing inside it ever sets
+   its own max-width; every block element therefore spans exactly
+   var(--col). Wide tables scroll inside .tw within the column. */
+body {
+  box-sizing: content-box;           /* --col measures content, padding is gutter */
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: clamp(1.8rem, 5vh, 3.5rem) 1.25rem 5rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 106.25%/1.66 var(--sans);
+  -webkit-text-size-adjust: 100%;
+  overflow-wrap: break-word;
+}
+
+/* cover rule — the report's masthead bar, top of the column */
+body::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: var(--ink);
+  margin-bottom: 2.1rem;
+}
+
+/* ---- masthead ------------------------------------------------ */
+header.part {
+  margin: 0 0 2.6rem;
+  padding-bottom: 1.7rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+header.part h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 1.2rem + 2.2vw, 2.05rem);
+  line-height: 1.16;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+header.part p {
+  margin: 0.85rem 0 0;
+  font-size: 1.02rem;
+  color: var(--muted);
+}
+
+/* spec sheet: mono key–value block under the title */
+dl.spec {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 2.2rem;
+  margin: 1.5rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+dl.spec dt,
+dl.spec dd {
+  margin: 0;
+  padding: 0.42em 0;
+  border-top: 1px solid var(--line);
+}
+
+dl.spec dt:first-of-type,
+dl.spec dt:first-of-type + dd { border-top: 0; }
+
+dl.spec dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding-top: 0.62em;              /* optically align caps with dd text */
+}
+
+/* ---- sections ------------------------------------------------ */
+section { margin: 2.8rem 0; }
+
+section + section {
+  border-top: 1px solid var(--line);
+  padding-top: 2.6rem;
+}
+
+h2 {
+  margin: 0 0 1.1rem;
+  font-size: 1.38rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* section number — mono, accent: the section marker */
+h2 .no {
+  font-family: var(--mono);
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--accent);
+  margin-right: 0.55em;
+  font-variant-numeric: tabular-nums;
+}
+
+h3 {
+  margin: 2rem 0 0.7rem;
+  font-size: 1.08rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+/* ---- prose --------------------------------------------------- */
+p { margin: 0 0 1.15rem; }
+p:last-child { margin-bottom: 0; }
+
+strong { font-weight: 700; }
+
+small { font-size: 0.85em; color: var(--muted); }
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgba(29, 95, 180, 0.4);
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color 120ms ease;
+}
+
+a:hover { text-decoration-color: currentColor; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection { background: rgba(42, 120, 214, 0.18); }
+
+ul, ol {
+  margin: 0 0 1.15rem;
+  padding-left: 1.5rem;
+}
+
+li { margin: 0.3rem 0; }
+li::marker { color: var(--muted); }
+ol li::marker {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2.5rem 0;
+}
+
+code, kbd {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  font-variant-numeric: tabular-nums;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.08em 0.32em;
+}
+
+pre {
+  margin: 1.4rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ---- callouts ------------------------------------------------ */
+.note, .method {
+  margin: 1.5rem 0;
+  padding: 0.95rem 1.15rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.note::before, .method::before {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.note::before { content: "Note"; }
+.method::before { content: "Method"; }
+
+/* ---- table of contents --------------------------------------- */
+nav.toc {
+  margin: 2.4rem 0;
+  padding: 1.05rem 0 1.15rem;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+nav.toc ol, nav.toc ul {
+  margin: 0;
+  padding-left: 1.6rem;
+}
+
+nav.toc li { margin: 0.32rem 0; }
+
+nav.toc a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+nav.toc a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+/* ---- figures ------------------------------------------------- */
+figure { margin: 2rem 0; }
+
+/* media fills the column exactly — same edges as body text */
+figure img, figure svg, figure canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+figcaption, caption {
+  margin-top: 0.65rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--muted);
+  text-align: left;
+}
+
+caption {
+  caption-side: bottom;
+  padding-top: 0.65rem;
+  margin-top: 0;
+}
+
+/* ---- tables --------------------------------------------------
+   Open style: horizontal rules only. First/last cells have zero
+   inline padding so table text sits flush on the column edges —
+   exactly aligned with paragraph text above and below. */
+.tw {
+  margin: 1.6rem 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tw > table { margin: 0; }
+
+table {
+  width: 100%;
+  margin: 1.6rem 0;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+th {
+  padding: 0.5rem 0.75rem 0.45rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 2px solid var(--ink);
+  white-space: nowrap;
+}
+
+td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child,  td:last-child  { padding-right: 0; }
+
+th.n, td.n { text-align: right; white-space: nowrap; }
+
+/* best-result cell — the accent's third and final job */
+td.hl {
+  background: var(--accent-wash);
+  box-shadow: inset 0 0 0 1px var(--accent-ring);
+  outline: 1px solid var(--accent-ring);
+  outline-offset: -1px;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+/* ---- disclosure ---------------------------------------------- */
+details {
+  margin: 1.5rem 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+summary {
+  padding: 0.65rem 1rem;
+  font-size: 0.93rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+summary:hover { color: var(--accent); }
+summary::marker { color: var(--accent); }
+
+details[open] { padding-bottom: 1rem; }
+details[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.9rem;
+}
+
+details > :not(summary) {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+/* ---- chips --------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.18em 0.65em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}
+
+/* series-keyed chips: swatch dot in the exact data color,
+   text darkened for contrast on paper */
+.chip.s1, .chip.blue  { color: var(--s1-ink); border-color: rgba(42, 120, 214, 0.4); }
+.chip.s2, .chip.green { color: var(--s2-ink); border-color: rgba(27, 175, 122, 0.4); }
+
+.chip.s1::before, .chip.blue::before,
+.chip.s2::before, .chip.green::before {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  flex: none;
+}
+
+.chip.s1::before, .chip.blue::before  { background: var(--s1); }
+.chip.s2::before, .chip.green::before { background: var(--s2); }
+
+/* ---- motion -------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- mobile -------------------------------------------------- */
+@media (max-width: 640px) {
+  body { padding: 1.4rem 1rem 3.5rem; }
+  body::before { margin-bottom: 1.6rem; }
+
+  section { margin: 2.2rem 0; }
+  section + section { padding-top: 2rem; }
+
+  dl.spec { grid-template-columns: 1fr; }
+  dl.spec dt { padding: 0.6em 0 0.05em; }
+  dl.spec dd { border-top: 0; padding: 0 0 0.5em; }
+  dl.spec dt:first-of-type { border-top: 0; }
+
+  table { font-size: 0.78rem; }
+  th { padding: 0.4rem 0.5rem 0.35rem; }
+  td { padding: 0.45rem 0.6rem; }
+
+  details > :not(summary) {
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+  }
+}
+
+/* ---- print --------------------------------------------------- */
+@media print {
+  body { background: #fff; padding-top: 0.5rem; }
+  a { color: inherit; }
+  .tw { overflow: visible; }
+  tr, figure, .note, .method { break-inside: avoid; }
+  details:not([open]) summary::marker { content: ""; }
+}
+</style>
+</head>
+<body>
+<header class="part">
+<h1>An 8&times; RTX PRO 6000 Blackwell node, measured for local LLM coding</h1>
+<p>I have temporary access to this node and am measuring what it delivers for local LLM coding. Below: the serving stack findings, throughput, concurrent-stream capacity, and coding-agent evaluation for three models. Measurement closed 2026-07-22; every number is measured on this machine.</p>
+<dl class="spec">
+<dt>gpu</dt><dd>8&times; NVIDIA RTX PRO 6000 Blackwell Server Edition &middot; 97,887 MiB each &middot; PCIe (no NVLink) &middot; 4 + 4 across two NUMA nodes</dd>
+<dt>cpu</dt><dd>2&times; AMD EPYC 9355 &middot; 64 cores</dd>
+<dt>mem</dt><dd>1.5 TiB DDR5</dd>
+<dt>storage</dt><dd>2&times; 7 TB local SSD &middot; 447 GB system disk</dd>
+<dt>network</dt><dd>10 gigabit &middot; model endpoints on localhost</dd>
+<dt>software</dt><dd>Debian 12 &middot; kernel 6.1.0-51-amd64 &middot; driver 580.95.05 &middot; CUDA 13.0 (system toolkit)</dd>
+</dl>
+<p><small>Companion report: <a href="https://asblab.github.io/4xh200nvl/">the 4&times; H200 NVL node</a> &mdash; same suite, same methods.</small></p>
+</header>
+<main>
+
+<section class="section">
+  <h2>Getting the stack to run</h2>
+  <p>Everything here runs without root or containers: vLLM in a Python virtual environment under a normal user account. Three findings from the bring-up, all specific to this GPU generation (compute capability 12.0):</p>
+  <p><strong>The pip CUDA toolchain does not work for JIT kernels.</strong> The CUDA 13 wheel line ships an nvcc newer than the bundled headers of every kernel-JIT library in the serving stack (flashinfer, tilelang, deepgemm), and each rejects the pairing at compile time; the pip toolkit also omits curand headers. The system CUDA 13.0 installation is the only self-consistent JIT toolchain on the node &mdash; every serving process runs with <code>CUDA_HOME</code> pointed at it. Stale JIT caches from failed builds poison retries and must be cleared when the toolchain changes.</p>
+  <p><strong>Released wheels cannot serve DeepSeek-V4-Flash on this card.</strong> Ten configurations across two vLLM wheel versions and three weight formats produced seven distinct failure modes: JIT header rejections, a scale-factor layout its GEMM library does not implement for this architecture, a missing kernel dispatch in the precompiled fallback, and an API mismatch between the engine and its attention library. <strong>A source build of vLLM (main branch) serves the model cleanly</strong> &mdash; its kernel libraries move in lockstep and carry current support for this architecture.</p>
+  <p><strong>Long-running servers need session lingering.</strong> Processes launched over SSH die with a clean SIGTERM when the last session disconnects unless <code>loginctl enable-linger</code> is set for the account &mdash; both serving lanes were reaped this way overnight before the cause was found. An unprivileged-serving detail worth knowing before it costs a night.</p>
+  <p><strong>Hardware-native FP4 works.</strong> The NVFP4 quantization of Qwen3-Coder-480B (272.9 GB) loads and serves on a 4-GPU NUMA-local group through the FP4 GEMM path, with coding capability statistically unchanged from the FP8 original (8/30 versus 9/30 on the companion node).</p>
+</section>
+
+<section class="section">
+  <h2>Serving throughput</h2>
+  <figure>
+    <table>
+      <thead><tr><th>Model</th><th>Precision</th><th class="n">GPUs</th><th class="n">Single stream, tok/s</th><th class="n">First token</th><th class="n">8 streams, tok/s</th></tr></thead>
+      <tbody>
+        <tr><td>Qwen3-Coder-30B-A3B</td><td>bf16</td><td class="n">1</td><td class="n">132.3</td><td class="n">53 ms</td><td class="n">479.4</td></tr>
+        <tr><td>DeepSeek-V4-Flash</td><td>bf16, fp8 cache</td><td class="n">2</td><td class="n hl">103.5</td><td class="n hl">94 ms</td><td class="n">238.0</td></tr>
+        <tr><td>Qwen3-Coder-480B NVFP4</td><td>NVFP4</td><td class="n">4</td><td class="n">88.4</td><td class="n">99 ms</td><td class="n">363.4</td></tr>
+      </tbody>
+    </table>
+    <figcaption>512-token prompts, 256-token outputs, fresh prompts every run (no prefix-cache reuse; see the companion report&rsquo;s methods). Tensor-parallel groups stay inside one NUMA node. DeepSeek-V4-Flash runs on the source-built engine; the highlighted cells are the cross-node surprise &mdash; see below.</figcaption>
+  </figure>
+  <p><strong>The engine mattered more than the interconnect.</strong> On the companion 4&times; H200 NVL node (vLLM v0.23.0), DeepSeek-V4-Flash ran 46.7 tok/s single-stream with a 3.3-second first token. Here &mdash; PCIe instead of NVLink, and a GPU with roughly a third of the memory bandwidth &mdash; the source-built engine serves the same model at 103.5 tok/s with a 94&nbsp;ms first token: 2.2&times; the decode speed and a 35&times; faster first token. The newer sparse-attention kernels, not the hardware, dominate this comparison.</p>
+</section>
+
+<section class="section">
+  <h2>Concurrent-stream capacity</h2>
+  <p>Same rules as the companion report: capacity is the largest concurrency holding 20 output tokens/s per stream, fresh prompts every run; 512-token prompts with 256-token outputs (light load) and 8,192-token prompts with 512-token outputs (agent-sized). Multi-instance rows run simultaneously, one bench client per instance.</p>
+  <figure>
+    <div class="tw">
+    <table>
+      <thead><tr><th>Model</th><th>Per instance</th><th class="n">512 &middot; 1 inst</th><th class="n">512 &middot; whole box</th><th class="n">8k &middot; 1 inst</th><th class="n">8k &middot; whole box</th></tr></thead>
+      <tbody>
+        <tr><td>Qwen3-Coder-30B-A3B</td><td>1 GPU</td><td class="n">128</td><td class="n hl">1,024 (8 inst)</td><td class="n">16</td><td class="n hl">128 (8 inst)</td></tr>
+        <tr><td>DeepSeek-V4-Flash</td><td>2 GPUs, NUMA-local</td><td class="n">56</td><td class="n">224 (4 inst)</td><td class="n">16</td><td class="n">64 (4 inst)</td></tr>
+        <tr><td>Qwen3-Coder-480B NVFP4</td><td>4 GPUs, NUMA-local</td><td class="n">40</td><td class="n">80 (2 inst)</td><td class="n">8</td><td class="n">16 (2 inst)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <figcaption>Concurrent streams at a 20 tok/s per-stream floor. Whole-box rows are measured (all instances simultaneously), not extrapolated. Peak observed aggregate: 21,603 output tok/s (8 Qwen3-30B instances). Per-cell data in <code>users.csv</code>.</figcaption>
+  </figure>
+  <p><strong>Replica scaling is exact on this node.</strong> For all three models, per-instance throughput at full box load is identical to the instance running alone &mdash; within 2% across 14 simultaneous-instance measurements. Eight single-GPU replicas, four 2-GPU tensor-parallel pairs, or two 4-GPU groups: none of them contend. This is the property the no-NVLink topology was expected to threaten and does not.</p>
+  <p><strong>Crossing the NUMA boundary costs almost nothing for 2-GPU tensor parallelism.</strong> A DeepSeek-V4-Flash instance split across the two sockets (one GPU on each) decodes at 105.0 tok/s single-stream versus 103.5 NUMA-local, and loses 5.5% at 56 concurrent streams. Decode-time all-reduces at this scale are too small for the interconnect topology to matter.</p>
+</section>
+
+<section class="section">
+  <h2>Coding-agent evaluation</h2>
+  <p>The same 30-task suite, harness, and rules as the companion report: stock-default terminal coding agent, hidden tests, zero retries, 600-second cap. One run per model.</p>
+  <figure>
+    <table>
+      <thead><tr><th>Model</th><th class="n">GPUs</th><th class="n">Passed (this node)</th><th class="n">Companion node (H200)</th><th class="n">Errored tool calls</th><th class="n">Median task time</th></tr></thead>
+      <tbody>
+        <tr><td>DeepSeek-V4-Flash</td><td class="n">2</td><td class="n hl">10&ndash;16/30 (3 runs)</td><td class="n">15&ndash;18/30 (4 runs)</td><td class="n">39 of 414</td><td class="n">46 s</td></tr>
+        <tr><td>Qwen3-Coder-480B NVFP4</td><td class="n">4</td><td class="n">8/30</td><td class="n">9/30 (FP8)</td><td class="n">37 of 264</td><td class="n">48 s</td></tr>
+        <tr><td>Qwen3-Coder-30B-A3B</td><td class="n">1</td><td class="n">5/30</td><td class="n">5/30</td><td class="n">53 of 429</td><td class="n">27 s</td></tr>
+      </tbody>
+    </table>
+    <figcaption>Suite v2, zero tool-call protocol failures, 5/5 smoke tasks on every row. Qwen3-Coder-30B scores identically across both nodes and every configuration ever tested. DeepSeek-V4-Flash ran three times on this node — 10, 16, and 15 of 30 — a spread that overlaps its companion-node range (15&ndash;18 across four runs): no measurable cross-node capability difference. In a separate 50-prompt tool-call probe per model, behavior matched the companion node exactly (zero malformed calls; the models differ only in how often they refuse deliberately mismatched prompts).</figcaption>
+  </figure>
+</section>
+
+<section class="section">
+  <h2>Concurrent-stream capacity</h2>
+  <p>Capacity counts <strong>concurrent streams</strong>, each held at 20 output tokens/s or better, with fresh prompts on every run. Multi-instance rows run separate model instances simultaneously (one per GPU for the 30B, one per NUMA-local GPU pair for DeepSeek, one per NUMA-local quad for the 480B) and sum the per-instance knees.</p>
+  <figure>
+    <div class="tw">
+    <table>
+      <thead><tr><th>Model</th><th class="n">Instances</th><th class="n">GPUs</th><th class="n">8k prompts</th><th class="n">512-tok prompts</th></tr></thead>
+      <tbody>
+        <tr><td>Qwen3-Coder-30B-A3B</td><td class="n">1</td><td class="n">1</td><td class="n">20</td><td class="n">144</td></tr>
+        <tr><td>Qwen3-Coder-30B-A3B</td><td class="n">8</td><td class="n">8</td><td class="n hl">160</td><td class="n hl">1,024</td></tr>
+        <tr><td>DeepSeek-V4-Flash</td><td class="n">1</td><td class="n">2</td><td class="n">16</td><td class="n">56</td></tr>
+        <tr><td>DeepSeek-V4-Flash</td><td class="n">4</td><td class="n">8</td><td class="n">64</td><td class="n">224</td></tr>
+        <tr><td>Qwen3-Coder-480B NVFP4</td><td class="n">1</td><td class="n">4</td><td class="n">10</td><td class="n">40</td></tr>
+        <tr><td>Qwen3-Coder-480B NVFP4</td><td class="n">2</td><td class="n">8</td><td class="n">20</td><td class="n">80</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <figcaption>Concurrent streams at a 20 tok/s per-stream floor. Intermediate instance counts scale linearly and are in <code>users.csv</code>. <strong>Replica scaling on this topology is lossless</strong>: instances on separate GPUs, PCIe pairs, or NUMA-local quads do not measurably interfere; only the full 8-instance load costs ~5% at short prompts (the per-instance knee drops one step). At agent-sized prompts, scaling is perfectly linear from 1 to 8 instances.</figcaption>
+  </figure>
+  <p><strong>Tensor parallelism helps more here than on the NVLink node.</strong> Qwen3-Coder-30B single-stream: 132 &rarr; 156 &rarr; 158 tok/s at 1 &rarr; 2 &rarr; 4 GPUs (+18%, then a latency plateau); 8-stream aggregate: 479 &rarr; 711 &rarr; 921 (+92% at 4 GPUs). On the H200 node the same model gained only +6% single-stream from NVLink tensor parallelism. The inversion is bandwidth arithmetic: this GPU&rsquo;s memory bandwidth is the bottleneck, so splitting weights across GPUs buys real speed, and the PCIe all-reduce cost is small at this model size. For capacity, replicas still beat tensor parallelism; for latency on a single stream, a 2-GPU split is worth 18%.</p>
+</section>
+
+<section class="section">
+  <h2>Measurement freeze</h2>
+  <p>Remaining on this node: longer-context sweeps, thermal characterization under sustained load, and periodic re-evaluation as the source-built engine is updated. The serving stack, methods, and all measurement rules carry over from the companion report.</p>
+</section>
+
+<section class="section">
+  <h2>Data</h2>
+  <p>Raw rows: <code>throughput.csv</code> and <code>evals.csv</code>. Methods are shared with the <a href="https://asblab.github.io/4xh200nvl/">companion report</a>. The numbers are free to use.</p>
+</section>
+</main>
+<footer>
+<hr>
+<p><small>Measured 2026-07-21/22 &middot; measurement in progress &middot; numbers are free to use &middot; <a href="throughput.csv">throughput.csv</a> &middot; <a href="evals.csv">evals.csv</a></small></p>
+</footer>
+</body>
+</html>

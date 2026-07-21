@@ -1,0 +1,6 @@
+model,precision,engine,config,gpus,single_stream_tok_s,ttft_c1_ms,c8_tok_s,ttft_c8_ms,date
+Qwen3-Coder-30B-A3B-Instruct,bf16,vllm-0.24.0-cu128,1xGPU,1,132.3,53,479.4,145,2026-07-21
+DeepSeek-V4-Flash,bf16 fp8-cache,vllm-src-b8fb56d,2xGPU-TP2-numa-local,2,103.5,94,238.0,3764,2026-07-21
+Qwen3-Coder-480B-A35B-NVFP4,NVFP4,vllm-0.24.0-cu128,4xGPU-TP4-numa-local,4,88.4,99,363.4,448,2026-07-21
+Qwen3-Coder-30B-A3B-Instruct,bf16,vllm-src-b8fb56d,2xGPU-TP2-numa-local,2,156.5,48,711.3,132,2026-07-22
+Qwen3-Coder-30B-A3B-Instruct,bf16,vllm-src-b8fb56d,4xGPU-TP4-numa-local,4,158.0,47,921.4,118,2026-07-22

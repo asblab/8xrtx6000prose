@@ -1,0 +1,16 @@
+model,per_instance_gpus,instances,prompt_tokens,concurrent_streams,per_stream_floor_tok_s,date
+Qwen3-Coder-30B-A3B-Instruct,1,1,512,128,20,2026-07-22
+Qwen3-Coder-30B-A3B-Instruct,1,2,512,256,20,2026-07-22
+Qwen3-Coder-30B-A3B-Instruct,1,4,512,512,20,2026-07-22
+Qwen3-Coder-30B-A3B-Instruct,1,8,512,1024,20,2026-07-22
+Qwen3-Coder-30B-A3B-Instruct,1,1,8192,16,20,2026-07-22
+Qwen3-Coder-30B-A3B-Instruct,1,8,8192,128,20,2026-07-22
+DeepSeek-V4-Flash,2,1,512,56,20,2026-07-22
+DeepSeek-V4-Flash,2,2,512,112,20,2026-07-22
+DeepSeek-V4-Flash,2,4,512,224,20,2026-07-22
+DeepSeek-V4-Flash,2,1,8192,16,20,2026-07-22
+DeepSeek-V4-Flash,2,4,8192,64,20,2026-07-22
+Qwen3-Coder-480B-A35B-NVFP4,4,1,512,40,20,2026-07-22
+Qwen3-Coder-480B-A35B-NVFP4,4,2,512,80,20,2026-07-22
+Qwen3-Coder-480B-A35B-NVFP4,4,1,8192,8,20,2026-07-22
+Qwen3-Coder-480B-A35B-NVFP4,4,2,8192,16,20,2026-07-22
